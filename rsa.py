@@ -38,15 +38,19 @@ class RSA:
     d = self.modinv(e, toitent_n)
     return ((n, e), (n, d))
   
-  def encrypt(self, message):
-    n, e = self.public_key
+  def encrypt(self, public_key, message):
+    n, e = public_key
     encrypted_message = [pow(ord(char), e, n) for char in message]
     return encrypted_message
 
   def decrypt(self, encrypted_message):
-    n, d = self.private_key
-    decrypted_message = ''.join([chr(pow(char, d, n)) for char in encrypted_message])
-    return decrypted_message
+    try:
+      n, d = self.private_key
+      decrypted_message = ''.join([chr(pow(char, d, n)) for char in encrypted_message])
+      return decrypted_message
+    except Exception as e:
+      print("Private key cannot decrypt this message")
+      return None
   
 if __name__ == "__main__":
   key_bits = 64
