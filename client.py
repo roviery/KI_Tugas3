@@ -1,13 +1,17 @@
 import socket
 import threading
 import ast
-from rsa import RSA
+import random
+from rsa.rsa import RSA
+from des.des import DES
 
 class ChatClient:
-  def __init__(self, host, port, username):
+  def __init__(self, host, port, username, des_key):
     self.host = host
     self.port = port
     self.username = username
+    self.des_key = des_key
+    self.des = DES(des_key)
     self.rsa = RSA(64)
     self.client_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     self.write_public_key()
@@ -32,17 +36,29 @@ class ChatClient:
       self.client_socket.close()
       exit()
 
+  def checkHex(self, s):
+    for ch in s:
+      if ((ch < '0' or ch > '9') and
+        (ch < 'A' or ch > 'F')):
+        return False
+         
+    return True
+
   def receive_messages(self):
     while True:
       try:
         message = self.client_socket.recv(2048).decode()
         if not message:
           break
+        sender = message.split("-")[0]
+        encrypted_des_key = tuple(ast.literal_eval(message.split("-")[1]))
+        encrypted_message = message.split("-")[2]
 
-        sender = message.split(" ")[0]
-        encrypted_message = tuple(ast.literal_eval(message.split(" ", 2)[2]))
-        ori_message = self.rsa.decrypt(encrypted_message)
-        print(f"[{sender}] {ori_message}")
+        decrypted_des_key = int(self.rsa.decrypt(encrypted_des_key))
+        des = DES(decrypted_des_key)
+        decrypted_message = des.decrypt(encrypted_message)
+        
+        print(f"[{sender}] {decrypted_message}")
       except socket.error:
         print("Connection lost")
         break
@@ -50,24 +66,23 @@ class ChatClient:
   def send_messages(self):
     while True:
       message = input("")
-      sender = message.split(" ")[0]
-      receiver = message.split(" ")[1]
-      ori_message = message.split(" ", 2)[2]
+      sender = message.split("-")[0]
+      receiver = message.split("-")[1]
+      ori_message = message.split("-", 2)[2]
 
-      file_path = f"{receiver}.txt"
-      with open(file_path, 'r') as file:
-        receiver_public_key = ast.literal_eval(file.read())
+      if (self.checkHex(ori_message) == False):
+        print("Message bukan berupa Hex")
+      else:
+        file_path = f"{receiver}.txt"
+        with open(file_path, 'r') as file:
+          receiver_public_key = ast.literal_eval(file.read())
 
-      encrypted_message = self.rsa.encrypt(receiver_public_key, ori_message)
-      encrypted_message_str = "["
-      for m in encrypted_message:
-        print
-        encrypted_message_str += f"{m}, "
-      encrypted_message_str = encrypted_message_str[:-2]
-      encrypted_message_str += "]"
-      message = f"{sender} {receiver} {encrypted_message_str}"
-      self.client_socket.send(message.encode())
+        encrypted_des_key = self.rsa.encrypt(receiver_public_key, str(self.des_key))
+        encrypted_message = self.des.encrypt(ori_message)
+        message = f"{sender}-{encrypted_des_key}-{encrypted_message}"
+        self.client_socket.send(message.encode())
+
 
 if __name__ == "__main__":
   username = input("Enter your username: ")
-  client = ChatClient("127.0.0.1", 5555, username)
+  client = ChatClient("127.0.0.1", 5555, username, random.randint(0, 1000))

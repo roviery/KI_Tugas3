@@ -1,4 +1,4 @@
-from table import *
+from .table import *
 import random
 
 class DES:
@@ -97,7 +97,6 @@ class DES:
     plain_text = self.hex_to_binary(plain_text)
     # Initial Permutation
     plain_text = self.permute(plain_text, initial_perm, 64)
-    print(f"Plain Text (ip) = {plain_text}")
 
     # Splitting
     left = plain_text[0:32]
@@ -133,7 +132,6 @@ class DES:
 
     # Final permutation: final rearranging of bits to get cipher text
     cipher_text = self.permute(combine, final_perm, 64)
-    print(f"Cipher Text = {cipher_text}")
     return self.binary_to_hex(cipher_text)
   
   def decrypt(self, plain_text):
