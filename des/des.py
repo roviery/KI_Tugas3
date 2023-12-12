@@ -12,12 +12,35 @@ class DES:
       return binary
     except ValueError:
       return "Invalid int input"
+    
+  def text_to_hex(self, text):
+    try:
+      # Convert the text to binary
+      binary_representation = ''.join(format(ord(char), '08b') for char in text)
+      # If the binary representation is longer than 64 bits, truncate it
+      binary_64bit = binary_representation[:64]
+      # If the binary representation is shorter than 64 bits, pad it with zeros
+      binary_64bit = binary_64bit.ljust(64, '0')
+      # Convert binary to hexadecimal
+      hex_result = hex(int(binary_64bit, 2))[2:].zfill(16)
+      return hex_result
+    except ValueError:
+      return "Invalid text input"
+    
+  def hex_to_text(self, hex_string):
+    try:
+      text_characters = [chr(int(hex_string[i:i+2], 16)) for i in range(0, len(hex_string), 2)]
+      text_result = ''.join(text_characters)
+      return text_result
+    except ValueError:
+      return "Invalid hex input"
   
   def binary_to_hex(self, binary_string):
     try:
+      binary_string = binary_string.zfill(64)
       decimal_number = int(binary_string, 2)
       hex_string = hex(decimal_number)[2:]
-      return hex_string.upper() 
+      return hex_string 
     except ValueError:
       return "Invalid binary input"
     
@@ -94,6 +117,7 @@ class DES:
     return rk, rkb, rk_reversed, rkb_reversed
   
   def encrypt(self, plain_text):
+    plain_text = self.text_to_hex(plain_text)
     plain_text = self.hex_to_binary(plain_text)
     # Initial Permutation
     plain_text = self.permute(plain_text, initial_perm, 64)
@@ -132,9 +156,12 @@ class DES:
 
     # Final permutation: final rearranging of bits to get cipher text
     cipher_text = self.permute(combine, final_perm, 64)
-    return self.binary_to_hex(cipher_text)
+    cipher_text = self.binary_to_hex(cipher_text)
+    cipher_text = self.hex_to_text(cipher_text)
+    return cipher_text
   
   def decrypt(self, plain_text):
+    plain_text = self.text_to_hex(plain_text)
     plain_text = self.hex_to_binary(plain_text)
     # Initial Permutation
     plain_text = self.permute(plain_text, initial_perm, 64)
@@ -174,14 +201,16 @@ class DES:
 
     # Final permutation: final rearranging of bits to get cipher text
     cipher_text = self.permute(combine, final_perm, 64)
-    return self.binary_to_hex(cipher_text)
+    cipher_text = self.binary_to_hex(cipher_text)
+    cipher_text = self.hex_to_text(cipher_text)
+    return cipher_text
 
 
 if __name__ == "__main__":
   key = random.randint(0, 1000)
   des = DES(key)
 
-  original_message = "ABCD1234ABCD1234"
+  original_message = "message"
 
   encrypted_message = des.encrypt(original_message)
 

@@ -36,14 +36,6 @@ class ChatClient:
       self.client_socket.close()
       exit()
 
-  def checkHex(self, s):
-    for ch in s:
-      if ((ch < '0' or ch > '9') and
-        (ch < 'A' or ch > 'F')):
-        return False
-         
-    return True
-
   def receive_messages(self):
     while True:
       try:
@@ -56,9 +48,14 @@ class ChatClient:
 
         decrypted_des_key = int(self.rsa.decrypt(encrypted_des_key))
         des = DES(decrypted_des_key)
-        decrypted_message = des.decrypt(encrypted_message)
+        chunks = [encrypted_message[i:i+8] for i in range(0, len(encrypted_message), 8)]
+        decrypted_message = ""
+        for chunk in chunks:
+          decrypted_message += des.decrypt(chunk)
         
         print(f"[{sender}] {decrypted_message}")
+      except TypeError:
+        break
       except socket.error:
         print("Connection lost")
         break
@@ -70,17 +67,18 @@ class ChatClient:
       receiver = message.split("-")[1]
       ori_message = message.split("-", 2)[2]
 
-      if (self.checkHex(ori_message) == False):
-        print("Message bukan berupa Hex")
-      else:
-        file_path = f"{receiver}.txt"
-        with open(file_path, 'r') as file:
-          receiver_public_key = ast.literal_eval(file.read())
+      file_path = f"{receiver}.txt"
+      with open(file_path, 'r') as file:
+        receiver_public_key = ast.literal_eval(file.read())
 
-        encrypted_des_key = self.rsa.encrypt(receiver_public_key, str(self.des_key))
-        encrypted_message = self.des.encrypt(ori_message)
-        message = f"{sender}-{encrypted_des_key}-{encrypted_message}"
-        self.client_socket.send(message.encode())
+      encrypted_des_key = self.rsa.encrypt(receiver_public_key, str(self.des_key))
+      chunks = [ori_message[i:i+8] for i in range(0, len(ori_message), 8)]
+      # Iterate over the chunks
+      encrypted_message = ""
+      for chunk in chunks:
+        encrypted_message += self.des.encrypt(chunk)
+      message = f"{sender}-{encrypted_des_key}-{encrypted_message}"
+      self.client_socket.send(message.encode())
 
 
 if __name__ == "__main__":
